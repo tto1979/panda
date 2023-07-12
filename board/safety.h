@@ -274,7 +274,6 @@ void generic_rx_checks(bool stock_ecu_detected) {
   if ((safety_mode_cnt > RELAY_TRNS_TIMEOUT) && stock_ecu_detected) {
     relay_malfunction_set();
   }
-  //generic_rx_checks
 }
 
 void relay_malfunction_set(void) {
