@@ -46,7 +46,7 @@ const int TOYOTA_GAS_INTERCEPTOR_THRSLD = 805;
 #define TOYOTA_COMMON_TX_MSGS                                                                                                               \
   {0x283, 0, 7}, {0x2E6, 0, 8}, {0x2E7, 0, 8}, {0x33E, 0, 7}, {0x344, 0, 8}, {0x365, 0, 7}, {0x366, 0, 7}, {0x4CB, 0, 8},  /* DSU bus 0 */  \
   {0x128, 1, 6}, {0x141, 1, 4}, {0x160, 1, 8}, {0x161, 1, 7}, {0x470, 1, 4},  /* DSU bus 1 */                                               \
-  {0x2E4, 0, 5}, {0x191, 0, 8}, {0x411, 0, 8}, {0x412, 0, 8}, {0x343, 0, 8}, {0x1D2, 0, 8}, {0x1D3, 0, 8},  /* LKAS + ACC */                               \
+  {0x2E4, 0, 5}, {0x191, 0, 8}, {0x411, 0, 8}, {0x412, 0, 8}, {0x343, 0, 8}, {0x1D2, 0, 8},  /* LKAS + ACC */                               \
   {0x750, 0, 8}, // white list 0x750 for Enhanced Diagnostic Request
 
 const CanMsg TOYOTA_TX_MSGS[] = {
@@ -62,7 +62,6 @@ const CanMsg TOYOTA_INTERCEPTOR_TX_MSGS[] = {
   {.msg = {{ 0xaa, 0, 8, .check_checksum = false, .frequency = 83U}, { 0 }, { 0 }}},                        \
   {.msg = {{0x260, 0, 8, .check_checksum = true, .quality_flag = (lta), .frequency = 50U}, { 0 }, { 0 }}},  \
   {.msg = {{0x1D2, 0, 8, .check_checksum = true, .frequency = 33U}, { 0 }, { 0 }}},                         \
-  {.msg = {{0x1D3, 0, 8, .check_checksum = true, .frequency = 33U}, { 0 }, { 0 }}},                         \
   {.msg = {{0x224, 0, 8, .check_checksum = false, .frequency = 40U},                                        \
            {0x226, 0, 8, .check_checksum = false, .frequency = 40U}, { 0 }}},                               \
 
@@ -337,8 +336,8 @@ static bool toyota_tx_hook(CANPacket_t *to_send) {
 
     // AleSato's automatic brakehold
     if (addr == 0x344) {
-      if (vehicle_moving || gas_pressed || !acc_main_on) {
-        tx = 0;
+      if ((addr == 0x191) && (vehicle_moving || gas_pressed || !acc_main_on)) {
+        tx = false;
       }
     }
   }
@@ -385,9 +384,21 @@ static int toyota_fwd_hook(int bus_num, int addr) {
     int is_acc_msg = (addr == 0x343);
     // Block AEB when stoped to use as a automatic brakehold
     int is_aeb_msg = (addr == 0x344);
-    int block_msg = is_lkas_msg || (is_acc_msg && !toyota_stock_longitudinal) || (is_aeb_msg && !vehicle_moving && acc_main_on && !gas_pressed);
-    if (!block_msg) {
-      bus_fwd = 0;
+    // int block_msg = is_lkas_msg || (is_acc_msg && !toyota_stock_longitudinal) || (is_aeb_msg && !vehicle_moving && acc_main_on && !gas_pressed);
+    // if (!block_msg) {
+      // bus_fwd = 0;
+
+    // detect if car has LTA message
+    if (addr == 0x191) { // TSS2 allow automatic brakehold
+      int block_msg = is_lkas_msg ||  (is_acc_msg && !toyota_stock_longitudinal) || (is_aeb_msg && !vehicle_moving && acc_main_on && !gas_pressed);
+      if (!block_msg) {
+        bus_fwd = 0;
+      }
+    } else {  // TSSP block automatic brakehold
+      int block_msg = is_lkas_msg || (is_acc_msg && !toyota_stock_longitudinal);
+      if (!block_msg) {
+        bus_fwd = 0;
+      }
     }
   }
 
