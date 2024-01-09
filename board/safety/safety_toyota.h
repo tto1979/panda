@@ -314,6 +314,12 @@ static bool toyota_tx_hook(CANPacket_t *to_send) {
         if ((eps_torque > TOYOTA_LTA_MAX_MEAS_TORQUE) && (torque_wind_down != 0)) {
           tx = false;
         }
+
+      // AleSato's automatic brakehold
+      if (addr == 0x344) {
+        if (vehicle_moving || gas_pressed || !acc_main_on) {
+          tx = false;
+        }
       }
     }
 
