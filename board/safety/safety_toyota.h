@@ -336,7 +336,7 @@ static bool toyota_tx_hook(CANPacket_t *to_send) {
 
     // AleSato's automatic brakehold
     if (addr == 0x344) {
-      if (vehicle_moving || gas_pressed || !acc_main_on) {
+      if ((addr == 0x191) && (vehicle_moving || gas_pressed || !acc_main_on)) {
         tx = false;
       }
     }
