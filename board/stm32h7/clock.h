@@ -26,6 +26,7 @@ void clock_init(void) {
   while ((PWR->CSR1 & PWR_CSR1_ACTVOSRDY) == 0);
   while ((PWR->CSR1 & PWR_CSR1_ACTVOS) != (PWR->D3CR & PWR_D3CR_VOS)); // check that VOS level was actually set
 #endif
+
   // Configure Flash ACR register LATENCY and WRHIGHFREQ (VOS0 range!)
   register_set(&(FLASH->ACR), FLASH_ACR_LATENCY_2WS | 0x20U, 0x3FU); // VOS2, AXI 100MHz-150MHz
   // enable external oscillator HSE
