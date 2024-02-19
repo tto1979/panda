@@ -31,6 +31,7 @@ fi
 cppcheck() {
   # note that cppcheck build cache results in inconsistent results as of v2.13.0
   OUTPUT=$DIR/.output.log
+<<<<<<< HEAD
   $CPPCHECK_DIR/cppcheck --force --inline-suppr -I $PANDA_DIR/board/ \
           -I $gcc_inc "$(arm-none-eabi-gcc -print-file-name=include)" \
           --suppressions-list=$DIR/suppressions.txt --suppress=*:*inc/* \
@@ -41,6 +42,17 @@ cppcheck() {
   # cppcheck bug: some MISRA errors won't result in the error exit code,
   # so check the output (https://trac.cppcheck.net/ticket/12440#no1)
   if grep -e "misra violation" -e "error" -e "style: " $OUTPUT > /dev/null; then
+=======
+  $CPPCHECK_DIR/cppcheck --enable=all --force --inline-suppr -I $PANDA_DIR/board/ \
+          -I $gcc_inc "$(arm-none-eabi-gcc -print-file-name=include)" \
+          --suppressions-list=$DIR/suppressions.txt --suppress=*:*inc/* \
+          --suppress=*:*include/* --error-exitcode=2 --addon=misra \
+          --check-level=exhaustive "$@" |& tee $OUTPUT
+
+  # cppcheck bug: some MISRA errors won't result in the error exit code,
+  # so check the output (https://trac.cppcheck.net/ticket/12440#no1)
+  if grep "misra violation" $OUTPUT > /dev/null; then
+>>>>>>> master
     exit 1
   fi
 }

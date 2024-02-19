@@ -52,8 +52,13 @@ const int TOYOTA_GAS_INTERCEPTOR_THRSLD = 805;
   {0x283, 0, 7}, {0x2E6, 0, 8}, {0x2E7, 0, 8}, {0x33E, 0, 7}, {0x344, 0, 8}, {0x365, 0, 7}, {0x366, 0, 7}, {0x4CB, 0, 8},  /* DSU bus 0 */  \
   {0x128, 1, 6}, {0x141, 1, 4}, {0x160, 1, 8}, {0x161, 1, 7}, {0x470, 1, 4},  /* DSU bus 1 */                                               \
 <<<<<<< HEAD
+<<<<<<< HEAD
   {0x2E4, 0, 5}, {0x191, 0, 8}, {0x411, 0, 8}, {0x412, 0, 8}, {0x343, 0, 8}, {0x1D2, 0, 8},  /* LKAS + ACC */                               \
   {0x750, 0, 8}, // white list 0x750 for Enhanced Diagnostic Request
+=======
+  {0x411, 0, 8},  /* PCS_HUD */                                                                                                             \
+  {0x750, 0, 8},  /* radar diagnostic address */                                                                                            \
+>>>>>>> master
 =======
   {0x411, 0, 8},  /* PCS_HUD */                                                                                                             \
   {0x750, 0, 8},  /* radar diagnostic address */                                                                                            \
@@ -231,7 +236,11 @@ static void toyota_rx_hook(const CANPacket_t *to_push) {
       gas_interceptor_prev = gas_interceptor;
     }
 
-    generic_rx_checks((addr == 0x2E4));
+    bool stock_ecu_detected = addr == 0x2E4;  // STEERING_LKA
+    if (!toyota_stock_longitudinal && (addr == 0x343)) {
+      stock_ecu_detected = true;  // ACC_CONTROL
+    }
+    generic_rx_checks(stock_ecu_detected);
   }
 }
 
@@ -354,6 +363,15 @@ static bool toyota_tx_hook(const CANPacket_t *to_send) {
       if ((is_tss2) && (vehicle_moving || gas_pressed || !acc_main_on)) {
         tx = false;
       }
+    }
+  }
+
+  // UDS: Only tester present ("\x0F\x02\x3E\x00\x00\x00\x00\x00") allowed on diagnostics address
+  if (addr == 0x750) {
+    // this address is sub-addressed. only allow tester present to radar (0xF)
+    bool invalid_uds_msg = (GET_BYTES(to_send, 0, 4) != 0x003E020FU) || (GET_BYTES(to_send, 4, 4) != 0x0U);
+    if (invalid_uds_msg) {
+      tx = 0;
     }
   }
 
