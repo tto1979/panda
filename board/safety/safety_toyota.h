@@ -33,6 +33,11 @@ const int TOYOTA_LTA_MAX_DRIVER_TORQUE = 150;
 
 // longitudinal limits
 const LongitudinalLimits TOYOTA_LONG_LIMITS = {
+  .max_accel = 2000,   // 2.0 m/s2
+  .min_accel = -3500,  // -3.5 m/s2
+};
+
+const LongitudinalLimits TOYOTA_LONG_LIMITS_SPORT = {
   .max_accel = 4000,   // 4.0 m/s2
   .min_accel = -3500,  // -3.5 m/s2
 };
@@ -72,6 +77,7 @@ const CanMsg TOYOTA_INTERCEPTOR_TX_MSGS[] = {
   {.msg = {{ 0xaa, 0, 8, .check_checksum = false, .frequency = 83U}, { 0 }, { 0 }}},                        \
   {.msg = {{0x260, 0, 8, .check_checksum = true, .quality_flag = (lta), .frequency = 50U}, { 0 }, { 0 }}},  \
   {.msg = {{0x1D2, 0, 8, .check_checksum = true, .frequency = 33U}, { 0 }, { 0 }}},                         \
+  {.msg = {{0x1D3, 0, 8, .check_checksum = true, .frequency = 33U}, { 0 }, { 0 }}},                         \
   {.msg = {{0x224, 0, 8, .check_checksum = false, .frequency = 40U},                                        \
            {0x226, 0, 8, .check_checksum = false, .frequency = 40U}, { 0 }}},                               \
 
@@ -194,7 +200,7 @@ static void toyota_rx_hook(const CANPacket_t *to_push) {
     // wrap lateral controls on main
     if (addr == 0x1D3) {
       // ACC main switch on is a prerequisite to enter controls, exit controls immediately on main switch off
-      // Signal: PCM_CRUISE_2/MAIN_ON at 15th bit 
+      // Signal: PCM_CRUISE_2/MAIN_ON at 15th bit
       acc_main_on = GET_BIT(to_push, 15U);
     }
 
@@ -236,6 +242,8 @@ static void toyota_rx_hook(const CANPacket_t *to_push) {
 }
 
 static bool toyota_tx_hook(const CANPacket_t *to_send) {
+  bool sport_mode = alternative_experience && ALT_EXP_RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX;
+
   bool tx = true;
   int addr = GET_ADDR(to_send);
   int bus = GET_BUS(to_send);
@@ -256,7 +264,11 @@ static bool toyota_tx_hook(const CANPacket_t *to_send) {
       desired_accel = to_signed(desired_accel, 16);
 
       bool violation = false;
-      violation |= longitudinal_accel_checks(desired_accel, TOYOTA_LONG_LIMITS);
+      if (sport_mode) {
+        violation |= longitudinal_accel_checks(desired_accel, TOYOTA_LONG_LIMITS_SPORT);
+      } else {
+        violation |= longitudinal_accel_checks(desired_accel, TOYOTA_LONG_LIMITS);
+      }
 
       // only ACC messages that cancel are allowed when openpilot is not controlling longitudinal
       if (toyota_stock_longitudinal) {
@@ -362,9 +374,10 @@ static bool toyota_tx_hook(const CANPacket_t *to_send) {
     bool invalid_uds_msg = (GET_BYTES(to_send, 0, 4) != 0x003E020FU) || (GET_BYTES(to_send, 4, 4) != 0x0U);
 
     // DP: Secret sauce.
-    bool dp_valid_uds_msgs = (GET_BYTES(to_send, 0, 4) == 0x10002141) || (GET_BYTES(to_send, 0, 4) == 0x60100241) || (GET_BYTES(to_send, 0, 4) == 0x69210241);
-    dp_valid_uds_msgs |= (GET_BYTES(to_send, 0, 4) == 0x10002142) || (GET_BYTES(to_send, 0, 4) == 0x60100242) || (GET_BYTES(to_send, 0, 4) == 0x10002142) || (GET_BYTES(to_send, 0, 4) == 0x69210242);
-    dp_valid_uds_msgs |= (GET_BYTES(to_send, 0, 4) == 0x11300540);
+    bool dp_valid_uds_msgs = false;
+    dp_valid_uds_msgs |= (GET_BYTES(to_send, 0, 4) == 0x10002141U) || (GET_BYTES(to_send, 0, 4) == 0x60100241U) || (GET_BYTES(to_send, 0, 4) == 0x69210241U);
+    dp_valid_uds_msgs |= (GET_BYTES(to_send, 0, 4) == 0x10002142U) || (GET_BYTES(to_send, 0, 4) == 0x60100242U) || (GET_BYTES(to_send, 0, 4) == 0x10002142U) || (GET_BYTES(to_send, 0, 4) == 0x69210242U);
+    dp_valid_uds_msgs |= (GET_BYTES(to_send, 0, 4) == 0x11300540U);
 
     if (invalid_uds_msg && !dp_valid_uds_msgs) {
       tx = false;
