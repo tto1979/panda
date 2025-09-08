@@ -126,7 +126,6 @@ pipeline {
               }
             }
 
-            /*
             stage('bootkick tests') {
               steps {
                 script {
@@ -134,7 +133,6 @@ pipeline {
                 }
               }
             }
-            */
           }
         }
       }
