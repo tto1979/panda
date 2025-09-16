@@ -4,7 +4,7 @@
 #include "board/crc.h"
 
 #ifdef STM32H7
-#define SPI_BUF_SIZE 2048U
+#define SPI_BUF_SIZE 4096U
 // H7 DMA2 located in D2 domain, so we need to use SRAM1/SRAM2
 #else
 #define SPI_BUF_SIZE 1024U
