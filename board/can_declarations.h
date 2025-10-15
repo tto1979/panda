@@ -12,6 +12,7 @@
   #define CANPACKET_DATA_SIZE_MAX 8U
 #endif
 
+
 typedef struct {
   unsigned char fd : 1;
   unsigned char bus : 3;
