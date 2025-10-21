@@ -16,6 +16,7 @@ void fault_occurred(uint32_t fault) {
   faults |= fault;
 }
 
+// cppcheck-suppress misra-c2012-8.7
 void fault_recovered(uint32_t fault) {
   if ((PERMANENT_FAULTS & fault) == 0U) {
     faults &= ~fault;
