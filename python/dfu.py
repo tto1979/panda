@@ -118,11 +118,10 @@ class PandaDFU:
   def program_bootstub(self, code_bootstub):
     self._handle.clear_status()
 
-    # erase bootstub + app sectors
-    for i in (0, 1):
+    # erase all sectors
+    for i in range(len(self._mcu_type.config.sector_sizes)):
       self._handle.erase_sector(i)
 
-    # write bootstub
     self._handle.program(self._mcu_type.config.bootstub_address, code_bootstub)
 
   def recover(self):
